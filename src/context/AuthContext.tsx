@@ -46,11 +46,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Login failed');
+
+      const contentType = response.headers.get("content-type");
+      let data: any;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response received:", text);
+        throw new Error(`Server returned non-JSON response (Status: ${response.status}). Check console for details.`);
       }
-      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
       setUser(data.user);
       memoryAccessToken = data.accessToken;
     } finally {
@@ -66,11 +77,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, role })
       });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || 'Registration failed');
+
+      const contentType = response.headers.get("content-type");
+      let data: any;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.error("Non-JSON response received:", text);
+        throw new Error(`Server returned non-JSON response (Status: ${response.status}). Check console for details.`);
       }
-      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+      
       setUser(data.user);
       memoryAccessToken = data.accessToken;
     } finally {

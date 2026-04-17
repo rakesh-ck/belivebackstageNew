@@ -12,31 +12,49 @@ import fs from 'fs';
 dotenv.config();
 
 // Load Firebase Config
-let firebaseConfig: any;
-try {
-  const configPath = new URL('./firebase-applet-config.json', import.meta.url);
-  if (fs.existsSync(configPath)) {
-    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  } else {
-    throw new Error('Config file missing');
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
+const FIREBASE_DATABASE_ID = process.env.FIREBASE_DATABASE_ID || process.env.VITE_FIREBASE_DATABASE_ID || '(default)';
+
+if (!FIREBASE_PROJECT_ID) {
+  console.warn("WARNING: FIREBASE_PROJECT_ID is not set in environment variables. Falling back to local file.");
+}
+
+// Initialization with idempotent check for Vercel cold starts
+if (!admin.apps.length) {
+  try {
+    let config: any = { projectId: FIREBASE_PROJECT_ID };
+    
+    // If not in environment, try loading from file as fallback
+    if (!FIREBASE_PROJECT_ID) {
+      const configPath = new URL('./firebase-applet-config.json', import.meta.url);
+      if (fs.existsSync(configPath)) {
+        const fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        config.projectId = fileConfig.projectId;
+      }
+    }
+
+    if (config.projectId) {
+      admin.initializeApp(config);
+      console.log("Firebase Admin initialized successfully with project:", config.projectId);
+    } else {
+      console.error("CRITICAL: Firebase configuration failed. No Project ID found.");
+    }
+  } catch (err) {
+    console.error("Firebase Admin initialization error:", err);
   }
-} catch (e) {
-  // Fallback to Env Vars for Vercel/Production
-  firebaseConfig = {
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || '(default)'
-  };
 }
 
-if (!firebaseConfig.projectId) {
-  console.error("CRITICAL: Firebase Project ID is missing. Check your environment variables.");
-}
+// Firestore getter that handles missing db cleanly
+const getDb = () => {
+  try {
+    return admin.firestore(FIREBASE_DATABASE_ID);
+  } catch (err) {
+    console.error("Firestore access error:", err);
+    return null;
+  }
+};
 
-admin.initializeApp({
-  projectId: firebaseConfig.projectId
-});
-
-const db = admin.firestore(firebaseConfig.firestoreDatabaseId);
+const db = getDb();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
