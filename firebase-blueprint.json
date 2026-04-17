@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["artist", "label", "admin"] },
+        "clientNumber": { "type": "string" },
+        "avatar": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "legalIdentity": { "type": "string" },
+        "fanContactEmail": { "type": "string", "format": "email" },
+        "timezone": { "type": "string" },
+        "promotionSetupDone": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role"]
+    },
+    "Release": {
+      "title": "Release",
+      "description": "Music release metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["audio", "video", "ringtone"] },
+        "genre": { "type": "string" },
+        "subgenre": { "type": "string" },
+        "label": { "type": "string" },
+        "upc": { "type": "string" },
+        "catalogNumber": { "type": "string" },
+        "explicitLyrics": { "type": "boolean" },
+        "coverArt": { "type": "string" },
+        "releaseDate": { "type": "string" },
+        "distributionType": { "type": "string", "enum": ["digital", "physical"] },
+        "status": { "type": "string", "enum": ["draft", "submitted", "delivered", "correction_requested", "takedown", "deleted"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "type", "genre", "status"]
+    },
+    "Track": {
+      "title": "Track",
+      "description": "Individual track within a release",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "releaseId": { "type": "string" },
+        "trackNumber": { "type": "number" },
+        "title": { "type": "string" },
+        "artistName": { "type": "string" },
+        "duration": { "type": "string" },
+        "isrc": { "type": "string" },
+        "audioUrl": { "type": "string" },
+        "explicitLyrics": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "releaseId", "title", "trackNumber"]
+    },
+    "RightsIssue": {
+      "title": "RightsIssue",
+      "description": "Copyright and rights management issues",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "store": { "type": "string", "enum": ["youtube", "other"] },
+        "category": { "type": "string" },
+        "assetTitle": { "type": "string" },
+        "artistName": { "type": "string" },
+        "assetId": { "type": "string" },
+        "dailyViews": { "type": "number" },
+        "status": { "type": "string", "enum": ["new", "pending", "rejected", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "store", "category", "assetTitle", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "User notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Store for user profile data"
+    },
+    "/releases/{releaseId}": {
+      "schema": "Release",
+      "description": "Store for music release metadata"
+    },
+    "/releases/{releaseId}/tracks/{trackId}": {
+      "schema": "Track",
+      "description": "Store for tracks associated with a specific release"
+    },
+    "/rightsIssues/{issueId}": {
+      "schema": "RightsIssue",
+      "description": "Store for copyright and rights issues"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Store for user-specific notifications"
+    }
+  }
+}
