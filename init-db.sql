@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS releases (
 CREATE TABLE IF NOT EXISTS tracks (
     id VARCHAR(36) PRIMARY KEY,
     releaseId VARCHAR(36) NOT NULL,
+    trackNumber INT DEFAULT 1,
     title VARCHAR(255) NOT NULL,
     artist VARCHAR(255) NOT NULL,
     isrc VARCHAR(20),

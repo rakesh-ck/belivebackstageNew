@@ -224,20 +224,24 @@ app.get("/api/catalog", authenticateToken, async (req: any, res) => {
       params.push(`%${search}%`);
     }
 
-    const [allRows] = await pool.execute(sql, params);
+    const [allRows] = await pool.query(sql, params);
     const total = (allRows as any[]).length;
     
-    const offset = (Number(page) - 1) * Number(limit);
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.max(1, parseInt(limit as string) || 20);
+    const offset = (pageNum - 1) * limitNum;
+    
     sql += ' LIMIT ? OFFSET ?';
-    params.push(Number(limit), offset);
+    params.push(limitNum, offset);
 
-    const [rows] = await pool.execute(sql, params);
+    // Use pool.query for LIMIT/OFFSET placeholders compatibility
+    const [rows] = await pool.query(sql, params);
 
     res.json({ 
       items: rows, 
       total, 
-      page: Number(page), 
-      totalPages: Math.ceil(total / Number(limit)) 
+      page: pageNum, 
+      totalPages: Math.ceil(total / limitNum) 
     });
   } catch (err) {
     console.error("Fetch Catalog Error:", err);
@@ -251,12 +255,35 @@ app.get("/api/catalog/:id", authenticateToken, async (req, res) => {
     const releases = releaseRows as any[];
     if (releases.length === 0) return res.status(404).json({ error: "Release not found" });
     
-    const [trackRows] = await pool.execute('SELECT * FROM tracks WHERE releaseId = ?', [req.params.id]);
+    const [trackRows] = await pool.execute('SELECT * FROM tracks WHERE releaseId = ? ORDER BY trackNumber ASC', [req.params.id]);
 
     res.json({ ...releases[0], tracks: trackRows, territories: [] });
   } catch (err) {
     console.error("Fetch Catalog Detail Error:", err);
     res.status(500).json({ error: "Failed to fetch catalog details" });
+  }
+});
+
+// Tracks Endpoints
+app.post("/api/releases/:id/tracks", authenticateToken, async (req: any, res) => {
+  try {
+    const { title, artistName, isrc, duration } = req.body;
+    const releaseId = req.params.id;
+    const trackId = uuidv4();
+
+    // Get current track count for trackNumber
+    const [rows] = await pool.execute('SELECT COUNT(*) as count FROM tracks WHERE releaseId = ?', [releaseId]);
+    const trackNumber = ((rows as any[])[0].count || 0) + 1;
+
+    await pool.execute(
+      'INSERT INTO tracks (id, releaseId, title, artist, isrc, duration, trackNumber) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [trackId, releaseId, title, artistName, isrc || '', duration || 0, trackNumber]
+    );
+
+    res.status(201).json({ id: trackId, title, trackNumber });
+  } catch (err) {
+    console.error("Create Track Error:", err);
+    res.status(500).json({ error: "Failed to add track" });
   }
 });
 

@@ -25,34 +25,57 @@ function cn(...inputs: ClassValue[]) {
 
 export const ReleaseDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [release, setRelease] = useState<Release | null>(null);
+  const [release, setRelease] = useState<(Release & { tracks: Track[] }) | null>(null);
   const [activeTab, setActiveTab] = useState<'tracks' | 'territories' | 'promotion'>('tracks');
   const [loading, setLoading] = useState(true);
+  const [isAddingTrack, setIsAddingTrack] = useState(false);
   const { accessToken } = useAuth();
 
-  useEffect(() => {
-    const fetchRelease = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/catalog/${id}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch release details');
-        }
-
-        const data = await response.json();
-        setRelease(data);
-      } catch (err) {
-        console.error(err);
-        setRelease(null);
-      } finally {
-        setLoading(false);
+  const fetchRelease = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/catalog/${id}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch release details');
       }
-    };
+
+      const data = await response.json();
+      setRelease(data);
+    } catch (err) {
+      console.error(err);
+      setRelease(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchRelease();
   }, [id, accessToken]);
+
+  const handleAddTrack = async (trackData: any) => {
+    try {
+      const response = await fetch(`/api/releases/${id}/tracks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(trackData)
+      });
+
+      if (!response.ok) throw new Error('Failed to add track');
+      
+      fetchRelease();
+      setIsAddingTrack(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add track');
+    }
+  };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading release details...</div>;
   if (!release) return <div className="p-8 text-center text-red-500 font-bold">Release not found</div>;
@@ -129,18 +152,25 @@ export const ReleaseDetailPage: React.FC = () => {
 
            {/* Tabs */}
            <div className="flex items-center border-b border-gray-100">
-              <Tab active={activeTab === 'tracks'} onClick={() => setActiveTab('tracks')} label="Tracks" count={0} />
+              <Tab active={activeTab === 'tracks'} onClick={() => setActiveTab('tracks')} label="Tracks" count={release.tracks.length} />
               <Tab active={activeTab === 'territories'} onClick={() => setActiveTab('territories')} label="Territories" count={240} />
               <Tab active={activeTab === 'promotion'} onClick={() => setActiveTab('promotion')} label="Promotion" icon={<Share2 size={16} />} />
            </div>
 
            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
-              {activeTab === 'tracks' && <TracksList />}
+              {activeTab === 'tracks' && <TracksList tracks={release.tracks} onAddClick={() => setIsAddingTrack(true)} />}
               {activeTab === 'territories' && <TerritoriesList />}
               {activeTab === 'promotion' && <PromotionSection release={release} />}
            </div>
         </div>
       </div>
+
+      {isAddingTrack && (
+        <AddTrackModal 
+          onClose={() => setIsAddingTrack(false)} 
+          onSubmit={handleAddTrack} 
+        />
+      )}
     </div>
   );
 };
@@ -173,7 +203,7 @@ const Tab: React.FC<{ active: boolean; onClick: () => void; label: string; count
   </button>
 );
 
-const TracksList: React.FC = () => (
+const TracksList: React.FC<{ tracks: Track[]; onAddClick: () => void }> = ({ tracks, onAddClick }) => (
   <div>
     <table className="w-full text-left">
       <thead className="bg-[#F5F5F5]">
@@ -181,27 +211,126 @@ const TracksList: React.FC = () => (
           <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Track#</th>
           <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Title</th>
           <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Artist</th>
-          <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duration</th>
+          <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">ISRC</th>
           <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Preview</th>
         </tr>
       </thead>
-      <tbody>
-         <tr>
-           <td colSpan={5} className="p-20 text-center">
-              <div className="flex flex-col items-center gap-4 text-gray-400">
-                 <Disc size={48} className="opacity-10" />
-                 <p className="text-sm font-medium">No tracks added to this release yet</p>
-                 <button className="px-6 py-2 border border-[#1976D2] text-[#1976D2] rounded-full text-xs font-bold uppercase tracking-widest hover:bg-blue-50 transition-colors flex items-center gap-2">
-                    <Plus size={16} />
-                    Add Tracks
+      <tbody className="divide-y divide-gray-50">
+         {tracks.length === 0 ? (
+           <tr>
+             <td colSpan={5} className="p-20 text-center">
+                <div className="flex flex-col items-center gap-4 text-gray-400">
+                   <Disc size={48} className="opacity-10" />
+                   <p className="text-sm font-medium">No tracks added to this release yet</p>
+                   <button 
+                    onClick={onAddClick}
+                    className="px-6 py-2 border border-[#1976D2] text-[#1976D2] rounded-full text-xs font-bold uppercase tracking-widest hover:bg-blue-50 transition-colors flex items-center gap-2"
+                   >
+                      <Plus size={16} />
+                      Add Tracks
+                   </button>
+                </div>
+             </td>
+           </tr>
+         ) : (
+           tracks.map((track) => (
+             <tr key={track.id} className="hover:bg-gray-50 transition-colors group">
+               <td className="px-6 py-4 text-sm font-medium text-gray-500">{track.trackNumber}</td>
+               <td className="px-6 py-4 font-bold text-gray-800">{track.title}</td>
+               <td className="px-6 py-4 text-sm text-gray-600">{track.artistName || (track as any).artist}</td>
+               <td className="px-6 py-4 text-xs font-mono text-gray-400 uppercase">{track.isrc || '—'}</td>
+               <td className="px-6 py-4">
+                 <button className="p-2 text-[#1976D2] hover:bg-blue-50 rounded-full transition-colors">
+                   <Play size={18} fill="currentColor" />
                  </button>
-              </div>
-           </td>
-         </tr>
+               </td>
+             </tr>
+           ))
+         )}
+         {tracks.length > 0 && (
+           <tr>
+             <td colSpan={5} className="px-6 py-4">
+               <button 
+                onClick={onAddClick}
+                className="text-[#1976D2] text-sm font-bold flex items-center gap-2 hover:underline"
+               >
+                 <Plus size={16} />
+                 Add another track
+               </button>
+             </td>
+           </tr>
+         )}
       </tbody>
     </table>
   </div>
 );
+
+const AddTrackModal: React.FC<{ onClose: () => void; onSubmit: (data: any) => void }> = ({ onClose, onSubmit }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    artistName: '',
+    isrc: '',
+    duration: 0
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+      <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-gray-800">Add Track</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 uppercase text-[10px] font-bold tracking-widest">
+            Close
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Track Title</label>
+            <input 
+              autoFocus
+              type="text" 
+              placeholder="e.g. Bohemian Rhapsody"
+              className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
+              onChange={(e) => setFormData({...formData, title: e.target.value})}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Primary Artist</label>
+            <input 
+              type="text" 
+              placeholder="Artist Name"
+              className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
+              onChange={(e) => setFormData({...formData, artistName: e.target.value})}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">ISRC (Optional)</label>
+            <input 
+              type="text" 
+              placeholder="FR-XXX-XX-XXXXX"
+              className="w-full px-4 py-2 border border-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976D2]"
+              onChange={(e) => setFormData({...formData, isrc: e.target.value})}
+            />
+          </div>
+        </div>
+        <div className="p-6 bg-gray-50 flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 px-6 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-bold hover:bg-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => onSubmit(formData)}
+            disabled={!formData.title || !formData.artistName}
+            className="flex-1 px-6 py-2 bg-[#1976D2] text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            Add Track
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const TerritoriesList: React.FC = () => (
   <div className="p-8">
