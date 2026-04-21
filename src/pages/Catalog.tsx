@@ -44,11 +44,18 @@ export const CatalogPage: React.FC<CatalogPageProps> = ({ statusFilter = 'all', 
         const response = await fetch(`/api/catalog?status=${statusFilter}&search=${searchTerm}&page=${page}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch catalog');
+        }
+
         const data = await response.json();
-        setReleases(data.items);
-        setTotal(data.total);
+        setReleases(data.items || []);
+        setTotal(data.total || 0);
       } catch (err) {
         console.error(err);
+        setReleases([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }

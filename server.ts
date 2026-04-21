@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from 'uuid';
 import mysql from 'mysql2/promise';
 import fs from 'fs';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(cookieParser());
 
 // Middleware
 const authenticateToken = (req: any, res: any, next: any) => {
@@ -145,6 +147,27 @@ app.get("/api/auth/me", authenticateToken, async (req: any, res) => {
   } catch (err) {
     console.error("Auth Me Error:", err);
     res.sendStatus(500);
+  }
+});
+
+app.get("/api/auth/refresh", async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) return res.sendStatus(401);
+
+  try {
+    const payload: any = jwt.verify(refreshToken, REFRESH_SECRET);
+    const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [payload.id]);
+    const users = rows as any[];
+    
+    if (users.length === 0) return res.sendStatus(401);
+    const user = users[0];
+
+    const accessToken = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
+    const { password: _, ...userWithoutPassword } = user;
+    
+    res.json({ user: userWithoutPassword, accessToken });
+  } catch (err) {
+    res.sendStatus(403);
   }
 });
 

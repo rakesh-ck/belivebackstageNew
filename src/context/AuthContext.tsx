@@ -22,12 +22,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/me', {
-          headers: memoryAccessToken ? { 'Authorization': `Bearer ${memoryAccessToken}` } : {}
-        });
+        // Try to refresh the session first to get a new access token
+        const response = await fetch('/api/auth/refresh');
         if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
+          const data = await response.json();
+          setUser(data.user);
+          memoryAccessToken = data.accessToken;
+        } else {
+          // If refresh fails, try standard check if memory token somehow exists (unlikely on reload)
+          if (memoryAccessToken) {
+            const meResponse = await fetch('/api/auth/me', {
+              headers: { 'Authorization': `Bearer ${memoryAccessToken}` }
+            });
+            if (meResponse.ok) {
+              const userData = await meResponse.json();
+              setUser(userData);
+            }
+          }
         }
       } catch (err) {
         console.error("Auth check failed", err);

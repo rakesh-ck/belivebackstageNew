@@ -37,10 +37,16 @@ export const ReleaseDetailPage: React.FC = () => {
         const response = await fetch(`/api/catalog/${id}`, {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch release details');
+        }
+
         const data = await response.json();
         setRelease(data);
       } catch (err) {
         console.error(err);
+        setRelease(null);
       } finally {
         setLoading(false);
       }
