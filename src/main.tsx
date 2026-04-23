@@ -11,6 +11,8 @@ import { ReleaseDetailPage } from './pages/ReleaseDetail';
 import { AnalyticsStreamsPage } from './pages/AnalyticsStreams';
 import { PromotionPage } from './pages/Promotion';
 import { RightsManagerPage } from './pages/RightsManager';
+import { AnalyticsTrendsPage } from './pages/AnalyticsTrends';
+import { AnalyticsPlaylistsPage } from './pages/AnalyticsPlaylists';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { NotificationsPage } from './pages/Notifications';
@@ -45,8 +47,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="catalog/correction" element={<CatalogPage title="Correction Requested" statusFilter="correction_requested" />} />
               <Route path="catalog/release/:id" element={<ReleaseDetailPage />} />
               <Route path="analytics/streams" element={<AnalyticsStreamsPage />} />
-              <Route path="analytics/trends" element={<Placeholder title="Daily Trends" />} />
-              <Route path="analytics/playlists" element={<Placeholder title="Playlists & Charts" />} />
+              <Route path="analytics/trends" element={<AnalyticsTrendsPage />} />
+              <Route path="analytics/playlists" element={<AnalyticsPlaylistsPage />} />
               <Route path="analytics/views" element={<Placeholder title="Views" />} />
               <Route path="analytics/shortform" element={<Placeholder title="Short-form videos" />} />
               <Route path="analytics/optimization" element={<Placeholder title="Catalog optimization" />} />

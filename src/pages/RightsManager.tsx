@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   AlertCircle, 
   Search, 
@@ -11,8 +11,10 @@ import {
   MoreVertical,
   ChevronLeft,
   ChevronRight,
-  Info
+  Info,
+  CheckCircle2
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -23,6 +25,29 @@ function cn(...inputs: ClassValue[]) {
 export const RightsManagerPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pending' | 'analytics' | 'resources'>('pending');
   const [platform, setPlatform] = useState('YouTube');
+  const [issues, setIssues] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { accessToken } = useAuth();
+
+  useEffect(() => {
+    const fetchIssues = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/rights-issues', {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setIssues(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (activeTab === 'pending') fetchIssues();
+  }, [activeTab, accessToken]);
 
   return (
     <div className="space-y-6">
@@ -116,38 +141,54 @@ export const RightsManagerPage: React.FC = () => {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-gray-50">
-                        {[1, 2, 3, 4, 5, 6].map(i => (
-                          <tr key={i} className="hover:bg-gray-50 transition-colors group cursor-pointer">
-                             <td className="px-6 py-4">
-                                <Youtube size={20} className="text-red-600" />
-                             </td>
-                             <td className="px-6 py-4">
-                                <span className="text-xs font-bold text-gray-800">Copyright Check</span>
-                             </td>
-                             <td className="px-6 py-4">
-                                <div className="text-sm font-bold text-[#1976D2] hover:underline">Midnight City (Official Video)</div>
-                                <div className="text-xs text-gray-400">M83 / AS-12345</div>
-                             </td>
-                             <td className="px-6 py-4">
-                                <div className="text-sm text-gray-800">Midnight City - EP</div>
-                                <div className="text-xs text-gray-400">Naïve</div>
-                             </td>
-                             <td className="px-6 py-4">
-                                <div className="text-xs text-gray-800 font-medium">UPC: 1234567890</div>
-                                <div className="text-xs text-gray-400">Warner Music Group</div>
-                             </td>
-                             <td className="px-6 py-4 font-bold text-gray-800">12.4K</td>
-                             <td className="px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                   <StatusBadge status={i % 3 === 0 ? 'new' : i % 3 === 1 ? 'pending' : 'resolved'} />
-                                   {i % 2 === 0 && <Flame size={14} className="text-red-500" />}
+                        {loading ? (
+                          <tr><td colSpan={8} className="p-20 text-center text-gray-400 italic">Scanning platforms for issues...</td></tr>
+                        ) : issues.length === 0 ? (
+                          <tr>
+                             <td colSpan={8} className="p-20 text-center">
+                                <div className="flex flex-col items-center gap-4 text-gray-400">
+                                   <div className="p-4 bg-green-50 text-green-500 rounded-full">
+                                      <CheckCircle2 size={32} />
+                                   </div>
+                                   <p className="font-bold text-gray-800">No pending rights issues found</p>
+                                   <p className="text-sm">We're monitoring your catalog 24/7 across all platforms.</p>
                                 </div>
                              </td>
-                             <td className="px-6 py-4 text-right">
-                                <MoreVertical size={16} className="text-gray-300 group-hover:text-gray-600" />
-                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          issues.map(issue => (
+                            <tr key={issue.id} className="hover:bg-gray-50 transition-colors group cursor-pointer">
+                               <td className="px-6 py-4">
+                                  <Youtube size={20} className="text-red-600" />
+                               </td>
+                               <td className="px-6 py-4">
+                                  <span className="text-xs font-bold text-gray-800 capitalize">{issue.category.replace('_', ' ')}</span>
+                               </td>
+                               <td className="px-6 py-4">
+                                  <div className="text-sm font-bold text-[#1976D2] hover:underline">{issue.assetTitle}</div>
+                                  <div className="text-xs text-gray-400">{issue.artistName} / {issue.assetId}</div>
+                               </td>
+                               <td className="px-6 py-4">
+                                  <div className="text-sm text-gray-800">{issue.albumTitle || '—'}</div>
+                                  <div className="text-xs text-gray-400">Original Label</div>
+                               </td>
+                               <td className="px-6 py-4">
+                                  <div className="text-xs text-gray-800 font-medium">UPC: {issue.upc || '—'}</div>
+                                  <div className="text-xs text-gray-400 font-medium">{issue.otherParty || 'Warner Music Group'}</div>
+                               </td>
+                               <td className="px-6 py-4 font-bold text-gray-800">{issue.dailyViews.toLocaleString()}</td>
+                               <td className="px-6 py-4">
+                                  <div className="flex items-center gap-2">
+                                     <StatusBadge status={issue.status} />
+                                     {issue.dailyViews > 5000 && <Flame size={14} className="text-red-500" />}
+                                  </div>
+                               </td>
+                               <td className="px-6 py-4 text-right">
+                                  <MoreVertical size={16} className="text-gray-300 group-hover:text-gray-600" />
+                               </td>
+                            </tr>
+                          ))
+                        )}
                      </tbody>
                   </table>
                </div>

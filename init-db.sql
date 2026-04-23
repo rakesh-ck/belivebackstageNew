@@ -12,9 +12,29 @@ CREATE TABLE IF NOT EXISTS users (
     role ENUM('artist', 'label', 'admin') DEFAULT 'artist',
     clientNumber VARCHAR(20) NOT NULL,
     isVerified BOOLEAN DEFAULT FALSE,
+    isAdmin BOOLEAN DEFAULT FALSE,
     promotionSetupDone BOOLEAN DEFAULT FALSE,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
     updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Rights Issues table
+CREATE TABLE IF NOT EXISTS rights_issues (
+    id VARCHAR(36) PRIMARY KEY,
+    userId VARCHAR(36) NOT NULL,
+    store ENUM('youtube', 'other') DEFAULT 'youtube',
+    category ENUM('copyright_check', 'release_claim', 'takedown_video') DEFAULT 'copyright_check',
+    assetTitle VARCHAR(255) NOT NULL,
+    albumTitle VARCHAR(255),
+    trackTitle VARCHAR(255),
+    artistName VARCHAR(255) NOT NULL,
+    assetId VARCHAR(255) NOT NULL,
+    upc VARCHAR(20),
+    otherParty VARCHAR(255),
+    dailyViews INT DEFAULT 0,
+    status ENUM('new', 'pending', 'rejected', 'resolved') DEFAULT 'new',
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Releases table

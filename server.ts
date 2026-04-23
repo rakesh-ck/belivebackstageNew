@@ -206,6 +206,61 @@ app.get("/api/releases/:id", authenticateToken, async (req, res) => {
   }
 });
 
+// Rights Issues Endpoints
+app.get("/api/rights-issues", authenticateToken, async (req: any, res) => {
+  try {
+    const [rows] = await pool.execute(
+      'SELECT * FROM rights_issues WHERE userId = ? ORDER BY createdAt DESC',
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("Fetch Rights Issues Error:", err);
+    res.status(500).json({ error: "Failed to fetch rights issues" });
+  }
+});
+
+// Analytics Endpoints
+app.get("/api/analytics/summary", authenticateToken, async (req: any, res) => {
+  try {
+    const [releaseRows] = await pool.execute('SELECT COUNT(*) as count FROM releases WHERE userId = ?', [req.user.id]);
+    const [deliveredRows] = await pool.execute('SELECT COUNT(*) as count FROM releases WHERE userId = ? AND status = "delivered"', [req.user.id]);
+    const [rightsRows] = await pool.execute('SELECT COUNT(*) as count FROM rights_issues WHERE userId = ? AND status != "resolved"', [req.user.id]);
+    
+    res.json({
+      totalStreams: "1.2M", 
+      activeReleases: (releaseRows as any[])[0].count,
+      deliveredReleases: (deliveredRows as any[])[0].count,
+      pendingRights: (rightsRows as any[])[0].count,
+      royalties: "$4,520",
+      trends: {
+        streams: "+12.5%",
+        releases: `+${(releaseRows as any[])[0].count}`,
+        royalties: "+8.4%"
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+app.get("/api/analytics/trends", authenticateToken, async (req: any, res) => {
+  try {
+    const data = [
+      { date: '2024-03-01', streams: 12000, views: 8000, revenue: 45 },
+      { date: '2024-03-02', streams: 15000, views: 9000, revenue: 52 },
+      { date: '2024-03-03', streams: 18000, views: 9500, revenue: 61 },
+      { date: '2024-03-04', streams: 16000, views: 8200, revenue: 55 },
+      { date: '2024-03-05', streams: 21000, views: 11000, revenue: 78 },
+      { date: '2024-03-06', streams: 25000, views: 13000, revenue: 92 },
+      { date: '2024-03-07', streams: 23000, views: 12000, revenue: 85 },
+    ];
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch trends" });
+  }
+});
+
 // Catalog Endpoints
 app.get("/api/catalog", authenticateToken, async (req: any, res) => {
   try {
